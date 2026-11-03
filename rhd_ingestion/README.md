@@ -1,9 +1,6 @@
 # Railway Help Desk — Ingestion, Chunking & ChromaDB Module (`rhd_ingestion`)
 
-> **GENAI NEXUS · COHORT 1 · MODULE 2 CAPSTONE**  
-> Covers **Piece 1: Documents In** (Document extraction, Scans OCR, Bilingual Hindi/English handling, Semantic chunking with provenance, and ChromaDB vector indexing).
 
----
 
 ## 1. Executive Summary & Team Quick Start
 
