@@ -1,52 +1,40 @@
 import os
-from google import genai
-from dotenv import load_dotenv
+from helpdesk.llm import generate_content_with_retry
 
-load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-def generate_grounded_answer(question: str, context_chunks: list):
+def generate_grounded_answer(question: str, chunks: list) -> dict:
     """
-    Generates an answer using Gemini based strictly on the provided context chunks.
+    Generates a grounded answer from retrieved chunks using Gemini with retry handling.
     """
-    if not context_chunks:
+    if not chunks:
         return {
             "answer": "I don't know based on the provided documents.",
             "sources": [],
             "dont_know": True
         }
-        
-    context_text = ""
-    sources = []
-    for chunk in context_chunks:
-        doc = chunk.get("doc")
-        page = chunk.get("page")
-        context_text += f"\n--- Source: {doc} (Page: {page}) ---\n{chunk.get('content')}\n"
-        sources.append({"doc": doc, "page": page})
 
-    prompt = f"""You are an official Indian Railways passenger help desk assistant.
-Answer the user's question accurately using ONLY the provided official documents below. 
-If the documents disagree because rules changed over time, the newer document wins.
-If the answer is not present in the documents, state "I don't know".
+    context_text = "\n\n".join([f"Source: {c['doc']} (Page {c['page']})\n{c['text']}" for c in chunks])
+    
+    prompt = f"""You are an expert Indian Railways help desk assistant. Answer the user's question using ONLY the provided document chunks below. 
+If the information is not present, respond with "I don't know". Note that newer circulars override older rules if they conflict.
+
+Context:
+{context_text}
 
 Question: {question}
 
-Context Documents:
-{context_text}
+Return your response clearly addressing the question, and list the exact sources used."""
 
-Answer in plain words:"""
+    try:
+        response = generate_content_with_retry(prompt, model='gemini-3.8-flash')
+        answer_text = response.text
+    except Exception as e:
+        answer_text = f"Error generating answer after retries: {str(e)}"
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
-    
-    answer_text = response.text.strip()
-    if "i don't know" in answer_text.lower():
-        return {"answer": answer_text, "sources": [], "dont_know": True}
+    sources = [{"doc": c["doc"], "page": c["page"]} for c in chunks]
+    is_dont_know = "i don't know" in answer_text.lower() or not answer_text.strip()
 
     return {
         "answer": answer_text,
-        "sources": sources,
-        "dont_know": False
+        "sources": sources if not is_dont_know else [],
+        "dont_know": is_dont_know
     }

@@ -1,4 +1,5 @@
 google-generativeai
 python-dotenv
 pypdf
-sqlite3
+PyMuPDF
+beautifulsoup4

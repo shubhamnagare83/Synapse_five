@@ -1,41 +1,24 @@
 import sqlite3
-import re
+import os
 
 DB_PATH = "database/rail_timetable.db"
 
-def get_readonly_connection():
-    """Opens SQLite database in strict read-only mode."""
-    db_uri = f"file:{DB_PATH}?mode=ro"
-    return sqlite3.connect(db_uri, uri=True)
-
 def validate_and_run_sql(query: str):
     """
-    Ensures query is strictly a SELECT statement and executes it safely.
-    Refuses harmful or write queries.
+    Runs a read-only SQL query against the SQLite timetable database.
     """
-    cleaned_query = query.strip().lower()
+    if not os.path.exists(DB_PATH):
+        return {"error": f"Database file not found at {DB_PATH}"}
     
-    # Security guardrails: Only allow SELECT statements
-    if not cleaned_query.startswith("select"):
-        raise ValueError("Unsafe or non-SELECT query rejected.")
-    
-    forbidden_keywords = ["insert", "update", "delete", "drop", "alter", "exec", "attach", "pragma"]
-    if any(word in cleaned_query for word in forbidden_keywords):
-        raise ValueError("Forbidden modification keyword detected in SQL.")
-
+    # Enforce read-only URI connection mode
+    db_uri = f"file:{os.path.abspath(DB_PATH)}?mode=ro"
     try:
-        conn = get_readonly_connection()
+        conn = sqlite3.connect(db_uri, uri=True)
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
-        # Execute query with a safety row limit if missing
         cursor.execute(query)
-        rows = cursor.fetchall()
-        columns = [description[0] for description in cursor.description]
-        
+        rows = [dict(row) for row in cursor.fetchall()]
         conn.close()
-        
-        # Format results into dictionaries
-        results = [dict(zip(columns, row)) for row in rows]
-        return results
+        return rows
     except Exception as e:
         return {"error": str(e)}
