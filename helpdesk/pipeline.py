@@ -27,7 +27,10 @@ Given the schema:
 Write a valid SQLite read-only query to answer this question: {question}
 Return ONLY the raw SQL query string inside plain text or a code block, nothing else."""
 
-            res = client.models.generate_content(model='gemini-3.8-flash', contents=sql_prompt) # Update model name here too
+            res = client.models.generate_content(model='gemini-3.8-flash', contents=sql_prompt)
+            # Extract and clean the raw text string into sql_query
+            sql_query = res.text.strip().replace("```sql", "").replace("```", "").strip()
+            
             if not sql_query.upper().startswith("SELECT"):
                 sql_query = f"SELECT * FROM stations WHERE name LIKE '%{question}%' LIMIT 5;"
 
