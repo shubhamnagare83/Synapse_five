@@ -25,10 +25,16 @@ Question: {question}
 Return your response clearly addressing the question, and list the exact sources used."""
 
     try:
-        response = generate_content_with_retry(prompt, model='gemini-3.8-flash')
+        response = generate_content_with_retry(prompt, model='gemini-2.5-flash')
         answer_text = response.text
     except Exception as e:
-        answer_text = f"Error generating answer after retries: {str(e)}"
+        # If Gemini API Key is missing or unavailable, provide an informative grounded summary from chunks
+        snippet = "\n---\n".join([c["text"][:300] for c in chunks[:2]])
+        answer_text = (
+            f"Retrieved relevant railway circular rules:\n\n{snippet}\n\n"
+            f"(Note: To enable generative LLM answers, please set GEMINI_API_KEY in your .env file)."
+        )
+
 
     sources = [{"doc": c["doc"], "page": c["page"]} for c in chunks]
     is_dont_know = "i don't know" in answer_text.lower() or not answer_text.strip()

@@ -1,25 +1,47 @@
-import json
 import os
+import sys
+from pathlib import Path
 
-INDEX_PATH = "index/chunks.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from helpdesk.ingest import load_ingested_chunks
 
 def search(question: str, k: int = 3) -> list:
     """
-    Searches the built chunk index for relevant document passages.
+    Searches extracted document chunks for relevant passages.
+    Prioritizes ChromaDB vector search if available, and seamlessly falls back
+    to robust keyword-matching on extracted chunks from rhd_ingestion/output/chunks.json.
     """
-    if not os.path.exists(INDEX_PATH):
-        from helpdesk.ingest import load_and_chunk_documents
-        chunks = load_and_chunk_documents()
-    else:
-        with open(INDEX_PATH, "r", encoding="utf-8") as f:
-            chunks = json.load(f)
+    # 1. Try vector similarity search with ChromaDB if available
+    try:
+        from rhd_ingestion.chroma_store import search_chroma
+        chroma_res = search_chroma(question, k=k)
+        if chroma_res and "documents" in chroma_res and chroma_res["documents"] and chroma_res["documents"][0]:
+            matched = []
+            docs = chroma_res["documents"][0]
+            metas = chroma_res["metadatas"][0] if "metadatas" in chroma_res and chroma_res["metadatas"] else [{}] * len(docs)
+            for text, meta in zip(docs, metas):
+                matched.append({
+                    "doc": meta.get("source", "railway_policy"),
+                    "source": meta.get("source", "railway_policy"),
+                    "page": meta.get("page"),
+                    "text": text
+                })
+            if matched:
+                return matched
+    except Exception:
+        pass
 
-    q_lower = question.lower()
+    # 2. Fallback / direct search on extracted chunks
+    chunks = load_ingested_chunks()
+    q_words = [w.lower() for w in question.split() if len(w) > 2]
     scored_chunks = []
 
     for chunk in chunks:
         text_lower = chunk["text"].lower()
-        score = sum(1 for word in q_lower.split() if word in text_lower)
+        score = sum(1 for word in q_words if word in text_lower)
         if score > 0:
             scored_chunks.append((score, chunk))
 
