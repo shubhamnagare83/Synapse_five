@@ -106,7 +106,9 @@ def ask(question: str) -> dict:
     timetable_keywords = [
         "timing", "timings", "timetable", "time table", "schedule", "schedules", 
         "arrival time", "departure time", "route of", "stops of", "duration of", 
-        "distance between", "train between", "trains from", "trains between", "halt time"
+        "distance between", "train between", "trains from", "trains between", "halt time",
+        "fastest train", "slowest train", "how long does it take", "how many hours", 
+        "train from", "train to", "trains to", "running between"
     ]
     # Document, rule, policy, booking, cancellation, refund keywords
     document_keywords = [
@@ -115,11 +117,12 @@ def ask(question: str) -> dict:
         "charting", "current booking", "tdr", "concession", "pehle", "kar sakthe"
     ]
     
-    # Question is routed to timetable SQL ONLY if it seeks timetable data and is NOT a policy/booking query
+    # Question is routed to timetable SQL if it seeks timetable/schedule/train info and NOT ticket rules
     is_timetable_query = (
         (any(kw in q_lower for kw in timetable_keywords) or re.search(r'\b\d{5}\b', q_lower))
         and not any(kw in q_lower for kw in document_keywords)
     )
+
 
 
     if is_timetable_query:
