@@ -25,7 +25,7 @@ Question: {question}
 Return your response clearly addressing the question, and list the exact sources used."""
 
     try:
-        response = generate_content_with_retry(prompt, model='gemini-2.5-flash')
+        response = generate_content_with_retry(prompt, model='gemini-3.5-flash-lite')
         answer_text = response.text
     except Exception as e:
         # If Gemini API Key is missing or unavailable, provide an informative grounded summary from chunks
