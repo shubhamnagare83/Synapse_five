@@ -56,9 +56,6 @@ def normalize_doc_name(name: str) -> str:
     return clean
 
 
-# ==============================================================================
-# 1. CORE INFORMATION RETRIEVAL (IR) METRICS
-# ==============================================================================
 
 def calculate_hit_rate(retrieved_docs: List[str], expected_sources: List[str], k: Optional[int] = None) -> float:
     """
